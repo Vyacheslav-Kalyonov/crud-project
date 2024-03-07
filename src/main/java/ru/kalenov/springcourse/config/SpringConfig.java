@@ -76,10 +76,10 @@ public class SpringConfig implements WebMvcConfigurer {
     }
 
     // Используем Hibernate вместо JdbcTemplate
-    @Bean
+    /*@Bean
     public JdbcTemplate jdbcTemplate() {
         return new JdbcTemplate(dataSource());
-    }
+    }*/
 
     private Properties hibernateProperties() {
         Properties properties = new Properties();

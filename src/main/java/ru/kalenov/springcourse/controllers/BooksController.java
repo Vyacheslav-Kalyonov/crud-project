@@ -12,8 +12,6 @@ import ru.kalenov.springcourse.dao.PersonDAO;
 import ru.kalenov.springcourse.models.Book;
 import ru.kalenov.springcourse.models.Person;
 
-import java.util.Optional;
-
 @Controller
 @RequestMapping("/books")
 public class BooksController {
@@ -37,10 +35,10 @@ public class BooksController {
     public String show(@PathVariable("id") int id, Model model, @ModelAttribute("person") Person person) {
         model.addAttribute("book", bookDAO.show(id));
 
-        Optional<Person> bookOwner = bookDAO.getBookOwner(id);
+        Person bookOwner = bookDAO.getBookOwner(id);
 
-        if (bookOwner.isPresent())
-            model.addAttribute("owner", bookOwner.get());
+        if (bookOwner != null)
+            model.addAttribute("owner", bookOwner);
         else
             model.addAttribute("people", personDAO.index());
 
@@ -48,17 +46,17 @@ public class BooksController {
     }
 
     @GetMapping("/new")
-    public String newBook(@ModelAttribute("book") Book Book) {
+    public String newBook(@ModelAttribute("book") Book book) {
         return "books/new";
     }
 
     @PostMapping()
-    public String create(@ModelAttribute("book") @Valid Book Book,
+    public String create(@ModelAttribute("book") @Valid Book book,
                          BindingResult bindingResult) {
         if (bindingResult.hasErrors())
             return "books/new";
 
-        bookDAO.save(Book);
+        bookDAO.save(book);
         return "redirect:/books";
     }
 

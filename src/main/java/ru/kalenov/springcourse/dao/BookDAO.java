@@ -1,63 +1,86 @@
 package ru.kalenov.springcourse.dao;
 
+import jakarta.transaction.Transactional;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.kalenov.springcourse.models.Book;
 import ru.kalenov.springcourse.models.Person;
 
 import java.util.List;
-import java.util.Optional;
+
 
 @Component
 public class BookDAO {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final SessionFactory sessionFactory;
 
     @Autowired
-    public BookDAO(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public BookDAO(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
     }
 
+    @Transactional
     public List<Book> index() {
-        return jdbcTemplate.query("SELECT * FROM Book", new BeanPropertyRowMapper<>(Book.class));
+        Session session = sessionFactory.getCurrentSession();
+
+        return session.createQuery("select b from Book b", Book.class).getResultList();
     }
 
+    @Transactional
     public Book show(int id) {
-        return jdbcTemplate.query("SELECT * FROM Book WHERE id=?", new Object[]{id}, new BeanPropertyRowMapper<>(Book.class))
-                .stream().findAny().orElse(null);
+        Session session = sessionFactory.getCurrentSession();
+        return session.get(Book.class, id);
     }
 
+    @Transactional
     public void save(Book book) {
-        jdbcTemplate.update("INSERT INTO Book(title, author, year) VALUES(?, ?, ?)", book.getTitle(),
-                book.getAuthor(), book.getYear());
+        Session session = sessionFactory.getCurrentSession();
+        session.save(book);
     }
 
+    @Transactional
     public void update(int id, Book updatedBook) {
-        jdbcTemplate.update("UPDATE Book SET title=?, author=?, year=? WHERE id=?", updatedBook.getTitle(),
-                updatedBook.getAuthor(), updatedBook.getYear(), id);
+        Session session = sessionFactory.getCurrentSession();
+
+        Book book = session.get(Book.class, id);
+        book.setAuthor(updatedBook.getAuthor());
+        book.setTitle(updatedBook.getTitle());
+        book.setYear(updatedBook.getYear());
+
+        session.update(book);
     }
 
+    @Transactional
     public void delete(int id) {
-        jdbcTemplate.update("DELETE FROM Book WHERE id=?", id);
+        Session session = sessionFactory.getCurrentSession();
+        Book book = session.get(Book.class, id);
+        session.delete(book);
     }
 
-    // Join'им таблицы Book и Person и получаем человека, которому принадлежит книга с указанным id
-    public Optional<Person> getBookOwner(int id) {
-        // Выбираем все колонки таблицы Person из объединенной таблицы
-        return jdbcTemplate.query("SELECT Person.* FROM Book JOIN Person ON Book.person_id = Person.id " +
-                        "WHERE Book.id = ?", new Object[]{id}, new BeanPropertyRowMapper<>(Person.class))
-                .stream().findAny();
+    @Transactional
+    public Person getBookOwner(int id) {
+        Session session = sessionFactory.getCurrentSession();
+        Book book = session.get(Book.class, id);
+        return book.getOwner();
     }
 
-    // Освбождает книгу (этот метод вызывается, когда человек возвращает книгу в библиотеку)
+    // Освобождает книгу (этот метод вызывается, когда человек возвращает книгу в библиотеку)
+    @Transactional
     public void release(int id) {
-        jdbcTemplate.update("UPDATE Book SET person_id=NULL WHERE id=?", id);
+        Session session = sessionFactory.getCurrentSession();
+        Book book = session.get(Book.class, id);
+        book.setOwner(null);
+        session.update(book);
     }
 
     // Назначает книгу человеку (этот метод вызывается, когда человек забирает книгу из библиотеки)
+    @Transactional
     public void assign(int id, Person selectedPerson) {
-        jdbcTemplate.update("UPDATE Book SET person_id=? WHERE id=?", selectedPerson.getId(), id);
+        Session session = sessionFactory.getCurrentSession();
+        Book book = session.get(Book.class, id);
+        book.setOwner(selectedPerson);
+        session.update(book);
     }
 }
